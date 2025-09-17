@@ -510,15 +510,15 @@ body.dark-mode #theme-icon-moon { display: block; }
             <div class="form-group"><label for="dueDate">Due Date</label><input type="date" id="dueDate"></div>
         </div>
         <div class="button-container">
-            <button class="btn btn-primary" id="generateBtn">
+            <button class="btn btn-primary" onclick="generateBarcode()">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6 18.25m0-4.421v4.421m10.56-4.421c.24.03.48.062.72.096m-.72-.096L18 18.25m0-4.421v4.421m-6.54-12.096a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" /></svg>
                 Generate & Print Label
             </button>
-            <button class="btn btn-primary" id="downloadExcelBtn">
+            <button class="btn btn-primary" onclick="downloadExcel()">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
                 Download Excel
             </button>
-            <button class="btn btn-primary" id="clearDataBtn">
+            <button class="btn btn-primary" onclick="confirmClearData()">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.134-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.067-2.09.921-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
                 Clear All Data
             </button>
@@ -545,33 +545,10 @@ body.dark-mode #theme-icon-moon { display: block; }
 
 <canvas id="barcode" width="2400" height="800" style="display:none;"></canvas>
 
-<!-- Firebase SDK -->
-<script type="module">
-  // These variables are automatically provided by the environment.
-  const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-  const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-  const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-  // Import Firebase modules
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-  import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-  import { getFirestore, collection, onSnapshot, addDoc, serverTimestamp, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-
-  // Authenticate user
-  if (initialAuthToken) {
-    await signInWithCustomToken(auth, initialAuthToken);
-  } else {
-    await signInAnonymously(auth);
-  }
-
+<script>
 document.addEventListener('DOMContentLoaded', function() {
     let rekapData = [];
-    const dataCollection = collection(db, `/artifacts/${appId}/public/data/orders`);
+    const dbKey = "rekapPOD_v2";
 
     // --- UI Elements ---
     const nomorEl = document.getElementById("nomor");
@@ -608,7 +585,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalCancelBtn = document.getElementById('modal-cancel-btn');
     let confirmCallback = null;
 
-    const showConfirmModal = (message, onConfirm) => {
+    window.showConfirmModal = (message, onConfirm) => {
         modalText.textContent = message;
         confirmCallback = onConfirm;
         confirmModal.classList.add('show');
@@ -624,23 +601,20 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // --- Core Functions ---
-    const listenData = () => {
-        onSnapshot(dataCollection, (snapshot) => {
-            rekapData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            updateTable();
-        });
+    const loadData = () => {
+        const storedData = localStorage.getItem(dbKey);
+        rekapData = storedData ? JSON.parse(storedData) : [];
+        updateTable();
+    };
+
+    const saveData = () => {
+        localStorage.setItem(dbKey, JSON.stringify(rekapData));
     };
 
     const updateStats = () => {
         totalOrdersEl.textContent = rekapData.length;
         const todayStr = new Date().toLocaleDateString('id-ID');
-        const todayCount = rekapData.filter(item => {
-            // Firestore timestamp needs to be converted to a Date object first
-            if (item.timestamp && item.timestamp.toDate) {
-                return item.timestamp.toDate().toLocaleDateString('id-ID') === todayStr;
-            }
-            return false;
-        }).length;
+        const todayCount = rekapData.filter(item => new Date(item.timestamp).toLocaleDateString('id-ID') === todayStr).length;
         todayOrdersEl.textContent = todayCount;
     };
     
@@ -650,9 +624,9 @@ document.addEventListener('DOMContentLoaded', function() {
         let filteredData = rekapData;
         if (filterText) {
             filteredData = rekapData.filter(item => 
-                (item.nomor || '').toLowerCase().includes(filterText) ||
-                (item.perusahaan || '').toLowerCase().includes(filterText) ||
-                (item.location || '').toLowerCase().includes(filterText)
+                item.nomor.toLowerCase().includes(filterText) ||
+                item.perusahaan.toLowerCase().includes(filterText) ||
+                item.location.toLowerCase().includes(filterText)
             );
         }
 
@@ -662,15 +636,12 @@ document.addEventListener('DOMContentLoaded', function() {
             tableBody.innerHTML = "";
             filteredData
                 .slice()
-                .sort((a, b) => {
-                    const timeA = a.timestamp?.toMillis() || 0;
-                    const timeB = b.timestamp?.toMillis() || 0;
-                    return timeB - timeA;
-                })
+                .sort((a, b) => b.timestamp - a.timestamp)
                 .forEach((item, index) => {
+                    const originalIndex = rekapData.indexOf(item);
                     const row = `<tr>
                         <td>${index + 1}</td>
-                        <td><a href="#" class="action-link" data-nomor="${item.nomor}" data-perusahaan="${item.perusahaan}" data-location="${item.location}" data-execdate="${item.execDate}" data-duedate="${item.dueDate}">${item.nomor}</a></td>
+                        <td><a href="#" onclick="printAgain(${originalIndex})" class="action-link">${item.nomor}</a></td>
                         <td>${item.perusahaan}</td>
                         <td>${item.location}</td>
                         <td>${item.execDate}</td>
@@ -683,7 +654,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateStats();
     };
 
-    const generateBarcode = async () => {
+    window.generateBarcode = () => {
         const nomor = nomorEl.value.trim();
         const keteranganVal = keteranganEl.value.trim();
         const locationVal = locationEl.value.trim();
@@ -707,24 +678,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
         printLabel(kode, keterangan, locationVal, execDateVal, dueDateVal);
 
-        try {
-            await addDoc(dataCollection, { 
-                nomor: kode, 
-                perusahaan: keterangan, 
-                location: locationVal, 
-                execDate: execDateVal, 
-                dueDate: dueDateVal, 
-                waktu: new Date().toLocaleString("id-ID"),
-                timestamp: serverTimestamp()
-            });
-            showToast("Label berhasil dibuat dan disimpan!", 'success');
-            nomorEl.value = '';
-            keteranganEl.value = '';
-            nomorEl.focus();
-        } catch (error) {
-            console.error("Error adding document: ", error);
-            showToast("Gagal menyimpan data ke database!", 'danger');
-        }
+        rekapData.push({ 
+            nomor: kode, 
+            perusahaan: keterangan, 
+            location: locationVal, 
+            execDate: execDateVal, 
+            dueDate: dueDateVal, 
+            waktu: new Date().toLocaleString("id-ID"),
+            timestamp: Date.now()
+        });
+        
+        saveData();
+        updateTable();
+        showToast("Label berhasil dibuat!", 'success');
+
+        nomorEl.value = '';
+        keteranganEl.value = '';
+        nomorEl.focus();
     };
 
     const printLabel = (nomor, perusahaan, location, execDate, dueDate) => {
@@ -746,25 +716,19 @@ document.addEventListener('DOMContentLoaded', function() {
         pdf.autoPrint();
         window.open(pdf.output("bloburl"), "_blank");
     };
-    
-    tableBody.addEventListener('click', (e) => {
-        if (e.target.classList.contains('action-link')) {
-            e.preventDefault();
-            const { nomor, perusahaan, location, execdate, duedate } = e.target.dataset;
-            printLabel(nomor, perusahaan, location, execdate, duedate);
-        }
-    });
 
-    const downloadExcel = () => {
+    window.printAgain = (index) => {
+        const item = rekapData[index];
+        printLabel(item.nomor, item.perusahaan, item.location, item.execDate, item.dueDate);
+    };
+
+    window.downloadExcel = () => {
         if (!rekapData.length) {
             showToast("Tidak ada data untuk diunduh!", 'warning');
             return;
         }
         const ws_data = [["No", "Nomor POD", "Nama Perusahaan", "Lokasi", "Received Date", "Due Date", "Waktu Generate"]];
-        rekapData
-          .slice()
-          .sort((a, b) => (b.timestamp?.toMillis() || 0) - (a.timestamp?.toMillis() || 0))
-          .forEach((item, index) => {
+        rekapData.forEach((item, index) => {
             ws_data.push([index + 1, item.nomor, item.perusahaan, item.location, item.execDate, item.dueDate, item.waktu]);
         });
         const wb = XLSX.utils.book_new();
@@ -773,20 +737,12 @@ document.addEventListener('DOMContentLoaded', function() {
         XLSX.writeFile(wb, `POD_Kalibrasi_${new Date().toISOString().split('T')[0]}.xlsx`);
     };
 
-    const confirmClearData = () => {
-        showConfirmModal("Apakah Anda yakin ingin menghapus semua data dari database?", async () => {
-            try {
-                const querySnapshot = await getDocs(dataCollection);
-                const batch = writeBatch(db);
-                querySnapshot.docs.forEach(doc => {
-                    batch.delete(doc.ref);
-                });
-                await batch.commit();
-                showToast("Semua data berhasil dihapus dari database.", 'success');
-            } catch (error) {
-                console.error("Error removing documents: ", error);
-                showToast("Gagal menghapus data.", 'danger');
-            }
+    window.confirmClearData = () => {
+        showConfirmModal("Apakah Anda yakin ingin menghapus semua data?", () => {
+            rekapData = [];
+            localStorage.removeItem(dbKey);
+            updateTable();
+            showToast("Semua data berhasil dihapus.", 'success');
         });
     };
 
@@ -816,19 +772,17 @@ document.addEventListener('DOMContentLoaded', function() {
         execDateEl.value = today.toISOString().split('T')[0];
         dueDateEl.value = nextWeek.toISOString().split('T')[0];
         
-        listenData(); // Start listening for realtime data
+        loadData();
         loadTheme();
     };
 
     // --- Event Listeners ---
     filterInputEl.addEventListener('input', updateTable);
     themeToggleBtn.addEventListener('click', toggleTheme);
-    document.getElementById('generateBtn').addEventListener('click', generateBarcode);
-    document.getElementById('downloadExcelBtn').addEventListener('click', downloadExcel);
-    document.getElementById('clearDataBtn').addEventListener('click', confirmClearData);
 
     initialize();
 });
 </script>
 </body>
 </html>
+
