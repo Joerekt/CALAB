@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Handling Order CALAB - Professional Dashboard</title>
+<!-- External Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  /* Light Theme (Default) */
+  --primary-color: #4f46e5;
+  --secondary-color: #7c3aed;
+  --success-color: #10b981;
+  --danger-color: #ef4444;
+  --warning-color: #f59e0b;
+  --border-radius: 12px;
+  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --transition: all 0.3s ease;
+  
+  --background-start: #f8fafc;
+  --background-end: #eef2f7;
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --input-bg: var(--background-start);
+  --table-header-bg: #f1f5f9;
+  --table-row-hover-bg: #f8fafc;
+  --action-link-color: var(--primary-color);
+  --action-link-hover-color: var(--secondary-color);
+  --modal-bg: var(--card-bg);
+  --modal-overlay-bg: rgba(30, 41, 59, 0.7);
+  --modal-cancel-btn-bg: #cbd5e1;
+  --modal-cancel-btn-text: var(--text-primary);
+  --datepicker-icon-filter: none;
+  --stat-icon-total-bg: rgba(79, 70, 229, 0.1);
+  --stat-icon-today-bg: rgba(16, 185, 129, 0.1);
+  --stat-icon-total-color: var(--primary-color);
+  --stat-icon-today-color: var(--success-color);
+}
+
+body.dark-mode {
+  /* Dark Theme */
+  --background-start: #111827;
+  --background-end: #1f2937;
+  --card-bg: rgba(31, 41, 55, 0.5);
+  --card-border: rgba(255, 255, 255, 0.1);
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --input-bg: rgba(0, 0, 0, 0.2);
+  --table-header-bg: rgba(255, 255, 255, 0.1);
+  --table-row-hover-bg: rgba(255, 255, 255, 0.03);
+  --action-link-color: #a5b4fc;
+  --action-link-hover-color: #e0e7ff;
+  --modal-bg: #273142;
+  --modal-overlay-bg: rgba(0, 0, 0, 0.7);
+  --modal-cancel-btn-bg: #4b5563;
+  --modal-cancel-btn-text: white;
+  --datepicker-icon-filter: invert(1);
+  --stat-icon-total-bg: rgba(79, 70, 229, 0.2);
+  --stat-icon-today-bg: rgba(16, 185, 129, 0.2);
+  --stat-icon-total-color: #a5b4fc;
+  --stat-icon-today-color: #6ee7b7;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(135deg, var(--background-start), var(--background-end));
+  color: var(--text-primary);
+  min-height: 100vh;
+  padding: 2rem;
+  overflow-x: hidden;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Header & Theme Toggle */
+.header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+  animation: fadeInDown 0.8s ease-out;
+  position: relative;
+}
+.header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.5rem;
+}
+.header p {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+.theme-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  padding: 0.5rem;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.theme-btn:hover {
+  transform: scale(1.1);
+  border-color: var(--primary-color);
+}
+.theme-btn svg {
+  width: 24px;
+  height: 24px;
+  color: var(--text-secondary);
+}
+#theme-icon-moon { display: none; }
+body.dark-mode #theme-icon-sun { display: none; }
+body.dark-mode #theme-icon-moon { display: block; }
+
+
+/* Stats Dashboard */
+.stats-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+.stat-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  transition: var(--transition);
+  animation: fadeInUp 0.8s ease-out both;
+  box-shadow: var(--shadow);
+}
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+.stat-icon {
+  font-size: 2.5rem;
+  padding: 1rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.total-icon { background-color: var(--stat-icon-total-bg); color: var(--stat-icon-total-color); }
+.today-icon { background-color: var(--stat-icon-today-bg); color: var(--stat-icon-today-color); }
+.stat-info .stat-number {
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text-primary);
+}
+.stat-info .stat-label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Main Card & Form */
+.main-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow);
+  padding: 2.5rem;
+  margin-bottom: 2.5rem;
+  animation: fadeInUp 0.8s ease-out 0.2s both;
+  backdrop-filter: blur(10px);
+}
+.form-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+.form-group label {
+  display: block;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+.form-group input, .form-group select {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1rem;
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  transition: var(--transition);
+  appearance: none;
+}
+.form-group select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+}
+.form-group input:focus, .form-group select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+}
+.form-group input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    filter: var(--datepicker-icon-filter);
+}
+
+/* Buttons */
+.button-container {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+.btn {
+  padding: 0.8rem 1.8rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  border-radius: var(--border-radius);
+  transition: var(--transition);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+.btn svg { width: 20px; height: 20px; }
+.btn-primary { background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)); color: white; }
+.btn:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 8px 25px rgba(79, 70, 229, 0.2); }
+.btn:active { transform: translateY(-1px) scale(1.02); }
+
+/* Table */
+.table-container {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--border-radius);
+  padding: 2rem;
+  overflow-x: auto;
+  animation: fadeInUp 0.8s ease-out 0.4s both;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
+}
+.filter-container {
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+#filterInput {
+    width: 100%;
+    padding: 1rem 1rem 1rem 3rem;
+    font-size: 1rem;
+    border: 1px solid var(--card-border);
+    border-radius: var(--border-radius);
+    background: var(--input-bg);
+    color: var(--text-primary);
+    transition: var(--transition);
+}
+#filterInput:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+}
+.filter-container svg {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    width: 20px;
+    height: 20px;
+}
+.table-container h3 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+    font-size: 1.5rem;
+}
+#rekapTable { width: 100%; border-collapse: collapse; }
+#rekapTable th {
+  background: var(--table-header-bg);
+  padding: 1rem;
+  font-weight: 600;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  border-bottom: 2px solid var(--card-border);
+}
+#rekapTable td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--card-border);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+#rekapTable tbody tr { transition: var(--transition); }
+#rekapTable tbody tr:hover { background-color: var(--table-row-hover-bg); }
+.empty-state { text-align: center; padding: 50px; color: var(--text-secondary); }
+.action-link {
+    color: var(--action-link-color);
+    font-weight: 500;
+    text-decoration: none;
+    transition: var(--transition);
+}
+.action-link:hover {
+    color: var(--action-link-hover-color);
+    text-decoration: underline;
+}
+
+/* Toast Notifications */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.toast {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px 20px;
+    border-radius: var(--border-radius);
+    color: white;
+    box-shadow: var(--shadow);
+    transform: translateX(120%);
+    transition: transform 0.5s ease;
+    opacity: 0;
+}
+.toast.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+.toast-success { background: linear-gradient(90deg, #10b981, #34d399); }
+.toast-danger { background: linear-gradient(90deg, #ef4444, #f87171); }
+.toast-warning { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+
+/* Confirmation Modal */
+#confirm-modal {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: var(--modal-overlay-bg);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+#confirm-modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+.modal-content {
+    background: var(--modal-bg);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+    box-shadow: var(--shadow);
+}
+#confirm-modal.show .modal-content {
+    transform: scale(1);
+}
+.modal-content p {
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+}
+.modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+.modal-btn {
+    padding: 0.6rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+.modal-btn-confirm {
+    background-color: var(--danger-color);
+    color: white;
+}
+.modal-btn-cancel {
+    background-color: var(--modal-cancel-btn-bg);
+    color: var(--modal-cancel-btn-text);
+}
+.modal-btn:hover { opacity: 0.8; }
+
+
+/* Animations */
+@keyframes fadeInDown { from { opacity:0; transform:translateY(-30px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeInUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+
+/* Responsive */
+@media (max-width: 768px) {
+    body { padding: 1rem; }
+    .header { margin-bottom: 4rem; }
+    .header h1 { font-size: 2rem; }
+    .theme-btn { top: auto; bottom: -3rem; left: 50%; transform: translateX(-50%); }
+    .stat-card { flex-direction: column; text-align: center; gap: 0.5rem; }
+}
+
+</style>
+</head>
+<body>
+
+<div id="toast-container"></div>
+
+<div id="confirm-modal">
+    <div class="modal-content">
+        <p id="modal-text">Are you sure?</p>
+        <div class="modal-buttons">
+            <button id="modal-confirm-btn" class="modal-btn modal-btn-confirm">Confirm</button>
+            <button id="modal-cancel-btn" class="modal-btn modal-btn-cancel">Cancel</button>
+        </div>
+    </div>
+</div>
+
+
+<div class="container">
+    <div class="header">
+        <h1>HANDLING ORDER CALAB</h1>
+        <p>Professional Label Management & POD Recap System</p>
+        <button id="theme-toggle" class="theme-btn" aria-label="Toggle theme">
+            <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.95-4.243-1.59-1.59M3 12h2.25m.386-6.364 1.591 1.591M12 12a2.25 2.25 0 0 0-2.25 2.25 2.25 2.25 0 0 0 2.25 2.25 2.25 2.25 0 0 0 2.25-2.25A2.25 2.25 0 0 0 12 12Z" />
+            </svg>
+            <svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25c0 5.385 4.365 9.75 9.75 9.75 2.833 0 5.396-1.21 7.252-3.248Z" />
+            </svg>
+        </button>
+    </div>
+
+    <div class="stats-container">
+        <div class="stat-card" style="animation-delay: 0.1s;">
+            <div class="stat-icon total-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="40" height="40"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75" /></svg>
+            </div>
+            <div class="stat-info">
+                <div class="stat-number" id="totalOrders">0</div>
+                <div class="stat-label">Total Orders</div>
+            </div>
+        </div>
+        <div class="stat-card" style="animation-delay: 0.2s;">
+            <div class="stat-icon today-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="40" height="40"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0h18M12 11.25h.008v.008H12v-.008Z" /></svg>
+            </div>
+            <div class="stat-info">
+                <div class="stat-number" id="todayOrders">0</div>
+                <div class="stat-label">Orders Today</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="main-card">
+        <div class="form-container">
+            <div class="form-group"><label for="nomor">Nomor POD</label><input type="text" id="nomor" placeholder="e.g., 12345"></div>
+            <div class="form-group"><label for="keterangan">Nama Perusahaan</label><input type="text" id="keterangan" placeholder="e.g., Maju Mundur"></div>
+            <div class="form-group"><label for="location">Lokasi</label>
+                <select id="location">
+                    <option value="IN LAB">IN LAB</option>
+                    <option value="ON SITE">ON SITE</option>
+                    <option value="SUB-CONTRACT">SUB-CONTRACT</option>
+                </select>
+            </div>
+            <div class="form-group"><label for="execDate">Received Date</label><input type="date" id="execDate"></div>
+            <div class="form-group"><label for="dueDate">Due Date</label><input type="date" id="dueDate"></div>
+        </div>
+        <div class="button-container">
+            <button class="btn btn-primary" onclick="generateBarcode()">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6 18.25m0-4.421v4.421m10.56-4.421c.24.03.48.062.72.096m-.72-.096L18 18.25m0-4.421v4.421m-6.54-12.096a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" /></svg>
+                Generate & Print Label
+            </button>
+            <button class="btn btn-primary" onclick="downloadExcel()">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                Download Excel
+            </button>
+            <button class="btn btn-primary" onclick="confirmClearData()">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.134-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.067-2.09.921-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+                Clear All Data
+            </button>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <h3>Rekap Data POD</h3>
+        <div class="filter-container">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+            <input type="text" id="filterInput" placeholder="Cari berdasarkan POD, Perusahaan, atau Lokasi...">
+        </div>
+        <table id="rekapTable">
+            <thead>
+                <tr>
+                    <th>No</th><th>Nomor POD</th><th>Nama Perusahaan</th>
+                    <th>Lokasi</th><th>Received Date</th><th>Due Date</th><th>Waktu Generate</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<canvas id="barcode" width="2400" height="800" style="display:none;"></canvas>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let rekapData = [];
+    const dbKey = "rekapPOD_v2";
+
+    // --- UI Elements ---
+    const nomorEl = document.getElementById("nomor");
+    const keteranganEl = document.getElementById("keterangan");
+    const locationEl = document.getElementById("location");
+    const execDateEl = document.getElementById("execDate");
+    const dueDateEl = document.getElementById("dueDate");
+    const tableBody = document.querySelector("#rekapTable tbody");
+    const totalOrdersEl = document.getElementById('totalOrders');
+    const todayOrdersEl = document.getElementById('todayOrders');
+    const filterInputEl = document.getElementById('filterInput');
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    const bodyEl = document.body;
+
+    // --- Toast Notifications ---
+    const showToast = (message, type = 'success') => {
+        const toastContainer = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.textContent = message;
+        toastContainer.appendChild(toast);
+
+        setTimeout(() => toast.classList.add('show'), 10);
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 500);
+        }, 3000);
+    };
+
+    // --- Confirmation Modal ---
+    const confirmModal = document.getElementById('confirm-modal');
+    const modalText = document.getElementById('modal-text');
+    const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+    const modalCancelBtn = document.getElementById('modal-cancel-btn');
+    let confirmCallback = null;
+
+    window.showConfirmModal = (message, onConfirm) => {
+        modalText.textContent = message;
+        confirmCallback = onConfirm;
+        confirmModal.classList.add('show');
+    };
+
+    modalConfirmBtn.addEventListener('click', () => {
+        if (confirmCallback) confirmCallback();
+        confirmModal.classList.remove('show');
+    });
+
+    modalCancelBtn.addEventListener('click', () => {
+        confirmModal.classList.remove('show');
+    });
+
+    // --- Core Functions ---
+    const loadData = () => {
+        const storedData = localStorage.getItem(dbKey);
+        rekapData = storedData ? JSON.parse(storedData) : [];
+        updateTable();
+    };
+
+    const saveData = () => {
+        localStorage.setItem(dbKey, JSON.stringify(rekapData));
+    };
+
+    const updateStats = () => {
+        totalOrdersEl.textContent = rekapData.length;
+        const todayStr = new Date().toLocaleDateString('id-ID');
+        const todayCount = rekapData.filter(item => new Date(item.timestamp).toLocaleDateString('id-ID') === todayStr).length;
+        todayOrdersEl.textContent = todayCount;
+    };
+    
+    const updateTable = () => {
+        const filterText = filterInputEl.value.toLowerCase();
+        
+        let filteredData = rekapData;
+        if (filterText) {
+            filteredData = rekapData.filter(item => 
+                item.nomor.toLowerCase().includes(filterText) ||
+                item.perusahaan.toLowerCase().includes(filterText) ||
+                item.location.toLowerCase().includes(filterText)
+            );
+        }
+
+        if (filteredData.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="7" class="empty-state">${filterText ? 'Data tidak ditemukan' : 'Belum ada data'}</td></tr>`;
+        } else {
+            tableBody.innerHTML = "";
+            filteredData
+                .slice()
+                .sort((a, b) => b.timestamp - a.timestamp)
+                .forEach((item, index) => {
+                    const originalIndex = rekapData.indexOf(item);
+                    const row = `<tr>
+                        <td>${index + 1}</td>
+                        <td><a href="#" onclick="printAgain(${originalIndex})" class="action-link">${item.nomor}</a></td>
+                        <td>${item.perusahaan}</td>
+                        <td>${item.location}</td>
+                        <td>${item.execDate}</td>
+                        <td>${item.dueDate}</td>
+                        <td>${item.waktu}</td>
+                    </tr>`;
+                    tableBody.innerHTML += row;
+                });
+        }
+        updateStats();
+    };
+
+    window.generateBarcode = () => {
+        const nomor = nomorEl.value.trim();
+        const keteranganVal = keteranganEl.value.trim();
+        const locationVal = locationEl.value.trim();
+        const execDateVal = execDateEl.value;
+        const dueDateVal = dueDateEl.value;
+        
+        if (!nomor || !keteranganVal || !locationVal || !execDateVal || !dueDateVal) {
+            showToast("Harap lengkapi semua kolom!", 'danger');
+            return;
+        }
+
+        const kode = "POD." + nomor;
+        
+        const isDuplicate = rekapData.some(item => item.nomor === kode);
+        if (isDuplicate) {
+            showToast("Nomor POD sudah ada!", 'warning');
+            return;
+        }
+
+        const keterangan = "PT. " + keteranganVal.toUpperCase();
+
+        printLabel(kode, keterangan, locationVal, execDateVal, dueDateVal);
+
+        rekapData.push({ 
+            nomor: kode, 
+            perusahaan: keterangan, 
+            location: locationVal, 
+            execDate: execDateVal, 
+            dueDate: dueDateVal, 
+            waktu: new Date().toLocaleString("id-ID"),
+            timestamp: Date.now()
+        });
+        
+        saveData();
+        updateTable();
+        showToast("Label berhasil dibuat!", 'success');
+
+        nomorEl.value = '';
+        keteranganEl.value = '';
+        nomorEl.focus();
+    };
+
+    const printLabel = (nomor, perusahaan, location, execDate, dueDate) => {
+        let barcodeWidth = 4;
+        if (nomor.length > 12) barcodeWidth = 3;
+        if (nomor.length > 18) barcodeWidth = 2.5;
+
+        JsBarcode("#barcode", nomor, { format: "CODE128", width: barcodeWidth, height: 300, fontSize: 60, displayValue: true, margin: 50 });
+        const imgData = document.getElementById("barcode").toDataURL("image/png");
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: [60, 40] });
+        pdf.setFontSize(8);
+        pdf.text(perusahaan, 30, 5, { align: "center" });
+        pdf.text("Location: " + location, 30, 10, { align: "center" });
+        pdf.text("Received Date: " + execDate, 30, 15, { align: "center" });
+        pdf.text("Due Date: " + dueDate, 30, 20, { align: "center" });
+        pdf.addImage(imgData, "PNG", 5, 22, 50, 15);
+        pdf.autoPrint();
+        window.open(pdf.output("bloburl"), "_blank");
+    };
+
+    window.printAgain = (index) => {
+        const item = rekapData[index];
+        printLabel(item.nomor, item.perusahaan, item.location, item.execDate, item.dueDate);
+    };
+
+    window.downloadExcel = () => {
+        if (!rekapData.length) {
+            showToast("Tidak ada data untuk diunduh!", 'warning');
+            return;
+        }
+        const ws_data = [["No", "Nomor POD", "Nama Perusahaan", "Lokasi", "Received Date", "Due Date", "Waktu Generate"]];
+        rekapData.forEach((item, index) => {
+            ws_data.push([index + 1, item.nomor, item.perusahaan, item.location, item.execDate, item.dueDate, item.waktu]);
+        });
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(ws_data);
+        XLSX.utils.book_append_sheet(wb, ws, "Rekap POD");
+        XLSX.writeFile(wb, `POD_Kalibrasi_${new Date().toISOString().split('T')[0]}.xlsx`);
+    };
+
+    window.confirmClearData = () => {
+        showConfirmModal("Apakah Anda yakin ingin menghapus semua data?", () => {
+            rekapData = [];
+            localStorage.removeItem(dbKey);
+            updateTable();
+            showToast("Semua data berhasil dihapus.", 'success');
+        });
+    };
+
+    // --- Theme Management ---
+    const toggleTheme = () => {
+        bodyEl.classList.toggle('dark-mode');
+        const isDarkMode = bodyEl.classList.contains('dark-mode');
+        localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+    };
+
+    const loadTheme = () => {
+        const savedTheme = localStorage.getItem('theme');
+        const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+            bodyEl.classList.add('dark-mode');
+        } else {
+            bodyEl.classList.remove('dark-mode');
+        }
+    };
+
+    // --- Initialization ---
+    const initialize = () => {
+        const today = new Date();
+        const nextWeek = new Date();
+        nextWeek.setDate(today.getDate() + 7);
+        execDateEl.value = today.toISOString().split('T')[0];
+        dueDateEl.value = nextWeek.toISOString().split('T')[0];
+        
+        loadData();
+        loadTheme();
+    };
+
+    // --- Event Listeners ---
+    filterInputEl.addEventListener('input', updateTable);
+    themeToggleBtn.addEventListener('click', toggleTheme);
+
+    initialize();
+});
+</script>
+</body>
+</html>
+
